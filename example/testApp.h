@@ -21,6 +21,7 @@ public:
 	
 	ofImage original;
 	ofImage * loaded;
+	ofImage original2;
 	
 };
 

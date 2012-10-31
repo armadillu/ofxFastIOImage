@@ -20,14 +20,25 @@ void testApp::setup(){
 
 void testApp::update(){
 	
+	// png OF
 	TIME_SAMPLE_START("load OF");
 	original.loadImage("rgba.png");
 	TIME_SAMPLE_STOP("load OF");
-	
+
 	TIME_SAMPLE_START("save OF");
 	original.saveImage(ofxiPhoneGetDocumentsDirectory() + "rgba_out.png");
 	TIME_SAMPLE_STOP("save OF");
+
+	// jpeg OF
+	TIME_SAMPLE_START("load jpeg OF");
+	original2.loadImage("nemo.jpg");
+	TIME_SAMPLE_STOP("load jpeg OF");
+
+	TIME_SAMPLE_START("save jpeg OF");
+	original2.saveImage(ofxiPhoneGetDocumentsDirectory() + "nemo2.jpg");
+	TIME_SAMPLE_STOP("save jpeg OF");
 	
+	//ofxFastIOImage
 	TIME_SAMPLE_START("save ofxFastIOImage");
 	ofxFastIOImage::saveTo( &original, ofxiPhoneGetDocumentsDirectory() + "fast" );
 	TIME_SAMPLE_STOP("save ofxFastIOImage");
@@ -36,7 +47,6 @@ void testApp::update(){
 	if (loaded) delete loaded;
 	loaded = ofxFastIOImage::loadFrom( ofxiPhoneGetDocumentsDirectory() + "fast" );
 	TIME_SAMPLE_STOP("load ofxFastIOImage");
-	
 }
 
 //--------------------------------------------------------------
