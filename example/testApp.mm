@@ -48,7 +48,7 @@ void testApp::update(){
 void testApp::draw(){
 
 	int ww = 200;
-	original.draw(0, 0, ww, ww);
+	loadedTex.draw(0, 0, ww, ww);
 
 }
 
