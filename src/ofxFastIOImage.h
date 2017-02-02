@@ -7,7 +7,7 @@ class ofxFastIOImage{
 
 public:
 	
-	static bool saveTo( ofImage * img, string path );
-	static ofImage* loadFrom( string path );
+	static bool saveTo( const ofPixels & data, const string & path );
+	static bool loadFrom( ofPixels & data, const string & path );
 };
 
