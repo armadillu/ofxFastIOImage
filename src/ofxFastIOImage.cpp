@@ -64,7 +64,11 @@ bool ofxFastIOImage::loadFrom( ofPixels & data, const string & path ){
 		size_t w = xml.getValue("w", 0);
 		size_t h = xml.getValue("h", 0);
 		ofImageType type = (ofImageType)xml.getValue("imgType", OF_IMAGE_UNDEFINED);
-		data.allocate(w, h, type);
+		if(data.getWidth() != w || data.getHeight() != h || data.getImageType() != type ){
+			TS_START("alloc bytes");
+			data.allocate(w, h, type);
+			TS_STOP("alloc bytes");
+		}
 		int bpp = 1;
 		if (type == OF_IMAGE_COLOR ) bpp = 3;
 		if (type == OF_IMAGE_COLOR_ALPHA ) bpp = 4;
@@ -87,3 +91,77 @@ bool ofxFastIOImage::loadFrom( ofPixels & data, const string & path ){
 	}
 	return false;
 }
+
+
+bool ofxFastIOImage::loadFromBMP( ofPixels & data, const string & bmpPath ){
+
+	string fullPath = ofToDataPath(bmpPath, true);
+
+	TS_START_NIF("read bytes BMP");
+		FILE * f = fopen(fullPath.c_str(), "rb");
+		if (f){
+			struct bmpDim{
+				uint32_t w;
+				uint32_t h;
+			};
+
+			bmpDim dim;
+			int n;
+			fseek(f, 18, SEEK_CUR); //skip to img dimensions
+			n = fread((char*)&dim, 8, 1, f); //read img dimensions
+
+			if(data.getWidth() != dim.w || data.getHeight() != dim.h || data.getImageType() != OF_IMAGE_COLOR ){
+				TS_START("alloc BMP");
+				data.allocate(dim.w, dim.h, OF_PIXELS_RGB);
+				TS_STOP("alloc BMP");
+			}
+
+			fseek(f, 54, SEEK_SET); //skip to data
+			n = fread((char*)data.getData(), dim.w * dim.h * 3, 1, f); //read img dimensions
+			fclose(f);
+			TS_STOP_NIF("read bytes BMP");
+			return true;
+		}
+
+	TS_STOP_NIF("read bytes BMP");
+	return false;
+}
+
+
+
+
+bool ofxFastIOImage::loadFromTGA( ofPixels & data, const string & tgaPath ){
+
+	string fullPath = ofToDataPath(tgaPath, true);
+
+	TS_START_NIF("read bytes TGA");
+	FILE * f = fopen(fullPath.c_str(), "rb");
+	if (f){
+		struct tgaDim{
+			uint16_t w;
+			uint16_t h;
+		};
+
+		tgaDim dim;
+		int n;
+		fseek(f, 12, SEEK_CUR); //skip to img dimensions
+		n = fread((char*)&dim, 4, 1, f); //read img dimensions
+
+		if(data.getWidth() != dim.w || data.getHeight() != dim.h || data.getImageType() != OF_IMAGE_COLOR ){
+			TS_START("alloc TGA");
+			data.allocate(dim.w, dim.h, OF_PIXELS_RGB);
+			TS_STOP("alloc TGA");
+		}
+
+		fseek(f, 2, SEEK_CUR); //advance 2 - skip to data
+		n = fread((char*)data.getData(), dim.w * dim.h * 3, 1, f);
+		fclose(f);
+		TS_STOP_NIF("read bytes TGA");
+		return true;
+	}
+
+	TS_STOP_NIF("read bytes TGA");
+	return false;
+}
+
+
