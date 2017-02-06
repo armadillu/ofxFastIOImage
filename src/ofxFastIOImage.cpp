@@ -2,6 +2,16 @@
 #include <iostream>
 #include "ofxTimeMeasurements.h"
 
+
+#ifndef PROFILE_FAST_IO_IMAGE
+	#pragma push_macro("TS_START_NIF")
+	#pragma push_macro("TS_STOP_NIF")
+	#undef TS_START_NIF
+	#undef TS_STOP_NIF
+	#define TS_START_NIF
+	#define TS_STOP_NIF
+#endif
+
 bool ofxFastIOImage::saveTo( const ofPixels & data, const string & path ){
 
 	string dataFile = path + "/data.bin" ;
@@ -25,7 +35,7 @@ bool ofxFastIOImage::saveTo( const ofPixels & data, const string & path ){
 	}
 
 	string fullPath = ofToDataPath(dataFile, true);
-	TS_START("save bytes");
+	TS_START_NIF("save bytes");
 	#if 1
     	ofstream myFile (fullPath.c_str(), ios::out | ios::binary);
     	myFile.write((char*)data.getData(), len);
@@ -39,14 +49,14 @@ bool ofxFastIOImage::saveTo( const ofPixels & data, const string & path ){
 			ofLogError() << "can't save binary data to '" << fullPath << "'";
 		}
 	#endif
-	TS_STOP("save bytes");
-	TS_START("save xml");
+	TS_STOP_NIF("save bytes");
+	TS_START_NIF("save xml");
 	ofxXmlSettings xml;
 	xml.setValue("w", (int)data.getWidth());
 	xml.setValue("h", (int)data.getHeight());
 	xml.setValue("imgType", data.getImageType());
 	xml.saveFile(infoFile);
-	TS_STOP("save xml");
+	TS_STOP_NIF("save xml");
 	return ok;
 }
 
@@ -65,16 +75,16 @@ bool ofxFastIOImage::loadFrom( ofPixels & data, const string & path ){
 		size_t h = xml.getValue("h", 0);
 		ofImageType type = (ofImageType)xml.getValue("imgType", OF_IMAGE_UNDEFINED);
 		if(data.getWidth() != w || data.getHeight() != h || data.getImageType() != type ){
-			TS_START("alloc bytes");
+			TS_START_NIF("alloc bytes");
 			data.allocate(w, h, type);
-			TS_STOP("alloc bytes");
+			TS_STOP_NIF("alloc bytes");
 		}
 		int bpp = 1;
 		if (type == OF_IMAGE_COLOR ) bpp = 3;
 		if (type == OF_IMAGE_COLOR_ALPHA ) bpp = 4;
 		string fullPath = ofToDataPath(dataFile, true);
 
-		TS_START("read bytes");
+		TS_START_NIF("read bytes");
 		#if 1
 			FILE * f = fopen(fullPath.c_str(), "rb");
 			int n;
@@ -86,7 +96,7 @@ bool ofxFastIOImage::loadFrom( ofPixels & data, const string & path ){
 			ifstream myFile (fullPath.c_str(), ios::in | ios::binary);
 			myFile.read((char*)data.getData(), w * h * bpp);
 		#endif
-		TS_STOP("read bytes");
+		TS_STOP_NIF("read bytes");
 		return true;
 	}
 	return false;
@@ -111,9 +121,9 @@ bool ofxFastIOImage::loadFromBMP( ofPixels & data, const string & bmpPath ){
 			n = fread((char*)&dim, 8, 1, f); //read img dimensions
 
 			if(data.getWidth() != dim.w || data.getHeight() != dim.h || data.getImageType() != OF_IMAGE_COLOR ){
-				TS_START("alloc BMP");
+				TS_START_NIF("alloc BMP");
 				data.allocate(dim.w, dim.h, OF_PIXELS_RGB);
-				TS_STOP("alloc BMP");
+				TS_STOP_NIF("alloc BMP");
 			}
 
 			fseek(f, 54, SEEK_SET); //skip to data
@@ -148,9 +158,9 @@ bool ofxFastIOImage::loadFromTGA( ofPixels & data, const string & tgaPath ){
 		n = fread((char*)&dim, 4, 1, f); //read img dimensions
 
 		if(data.getWidth() != dim.w || data.getHeight() != dim.h || data.getImageType() != OF_IMAGE_COLOR ){
-			TS_START("alloc TGA");
+			TS_START_NIF("alloc TGA");
 			data.allocate(dim.w, dim.h, OF_PIXELS_RGB);
-			TS_STOP("alloc TGA");
+			TS_STOP_NIF("alloc TGA");
 		}
 
 		fseek(f, 2, SEEK_CUR); //advance 2 - skip to data
@@ -165,3 +175,7 @@ bool ofxFastIOImage::loadFromTGA( ofPixels & data, const string & tgaPath ){
 }
 
 
+#ifndef PROFILE_FASTIOIMAGE
+	#pragma pop_macro("TS_START_NIF")
+	#pragma pop_macro("TS_STOP_NIF")
+#endif
