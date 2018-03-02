@@ -74,11 +74,9 @@ bool ofxFastIOImage::loadFrom( ofPixels & data, const string & path ){
 		size_t w = xml.getValue("w", 0);
 		size_t h = xml.getValue("h", 0);
 		ofImageType type = (ofImageType)xml.getValue("imgType", OF_IMAGE_UNDEFINED);
-		if(data.getWidth() != w || data.getHeight() != h || data.getImageType() != type ){
-			TS_START_NIF("alloc bytes");
-			data.allocate(w, h, type);
-			TS_STOP_NIF("alloc bytes");
-		}
+		TS_START_NIF("alloc bytes");
+		data.allocate(w, h, type); //internally, it wont realloc if its alreadyy alloc'd but it will overwrite the pixel format
+		TS_STOP_NIF("alloc bytes");
 		int bpp = 1;
 		if (type == OF_IMAGE_COLOR ) bpp = 3;
 		if (type == OF_IMAGE_COLOR_ALPHA ) bpp = 4;
@@ -102,8 +100,28 @@ bool ofxFastIOImage::loadFrom( ofPixels & data, const string & path ){
 	return false;
 }
 
+void swapRB(ofPixels & pix) {
+	size_t x;
+	size_t len = pix.getTotalBytes();
+	size_t skip = pix.getNumChannels();
+	unsigned char * data = pix.getData();
+	for(x = 0; x < len; x += skip) {
+		std::swap(data[x], data[x+2]);
+	}
+}
 
-bool ofxFastIOImage::loadFromBMP( ofPixels & data, const string & bmpPath ){
+void reverseBytes(unsigned char *start, size_t size) {
+	unsigned char *lo = start;
+	unsigned char *hi = start + size - 1;
+	unsigned char swap;
+	while (lo < hi) {
+		swap = *lo;
+		*lo++ = *hi;
+		*hi-- = swap;
+	}
+}
+
+bool ofxFastIOImage::loadFromBMP( ofPixels & data, const string & bmpPath, bool convertToRGB, bool fixFlip ){
 
 	string fullPath = ofToDataPath(bmpPath, true);
 
@@ -120,27 +138,32 @@ bool ofxFastIOImage::loadFromBMP( ofPixels & data, const string & bmpPath ){
 			fseek(f, 18, SEEK_CUR); //skip to img dimensions
 			n = fread((char*)&dim, 8, 1, f); //read img dimensions
 
-			if(data.getWidth() != dim.w || data.getHeight() != dim.h || data.getImageType() != OF_IMAGE_COLOR ){
-				TS_START_NIF("alloc BMP");
-				data.allocate(dim.w, dim.h, OF_PIXELS_RGB);
-				TS_STOP_NIF("alloc BMP");
-			}
+			data.allocate(dim.w, dim.h, OF_PIXELS_BGR); //internally, it wont realloc if its alreadyy alloc'd but it will overwrite the pixel format
 
 			fseek(f, 54, SEEK_SET); //skip to data
 			n = fread((char*)data.getData(), dim.w * dim.h * 3, 1, f); //read img dimensions
 			fclose(f);
 			TS_STOP_NIF("read bytes BMP");
+
+			if(fixFlip){
+				TS_START_NIF("reverse bytes BMP");
+				data.mirror(true, false);
+				TS_STOP_NIF("reverse bytes BMP");
+			}
+
+			if(convertToRGB){
+				TS_START_NIF("swap bytes BMP");
+				data.swapRgb();
+				TS_STOP_NIF("swap bytes BMP");
+			}
 			return true;
 		}
-
 	TS_STOP_NIF("read bytes BMP");
 	return false;
 }
 
 
-
-
-bool ofxFastIOImage::loadFromTGA( ofPixels & data, const string & tgaPath ){
+bool ofxFastIOImage::loadFromTGA( ofPixels & data, const string & tgaPath, bool convertToRGB ){
 
 	string fullPath = ofToDataPath(tgaPath, true);
 
@@ -157,16 +180,17 @@ bool ofxFastIOImage::loadFromTGA( ofPixels & data, const string & tgaPath ){
 		fseek(f, 12, SEEK_CUR); //skip to img dimensions
 		n = fread((char*)&dim, 4, 1, f); //read img dimensions
 
-		if(data.getWidth() != dim.w || data.getHeight() != dim.h || data.getImageType() != OF_IMAGE_COLOR ){
-			TS_START_NIF("alloc TGA");
-			data.allocate(dim.w, dim.h, OF_PIXELS_RGB);
-			TS_STOP_NIF("alloc TGA");
-		}
+		data.allocate(dim.w, dim.h, OF_PIXELS_BGR); //internally, it wont realloc if its alreadyy alloc'd but it will overwrite the pixel format
 
 		fseek(f, 2, SEEK_CUR); //advance 2 - skip to data
 		n = fread((char*)data.getData(), dim.w * dim.h * 3, 1, f);
 		fclose(f);
 		TS_STOP_NIF("read bytes TGA");
+		if(convertToRGB){
+			TS_START_NIF("swap bytes TGA");
+			data.swapRgb();
+			TS_STOP_NIF("swap bytes TGA");
+		}
 		return true;
 	}
 
